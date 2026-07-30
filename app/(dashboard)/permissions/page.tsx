@@ -364,8 +364,8 @@ export default function PermissionsPage() {
       </PageHeader>
 
       <DataTable
-        columns={viewMode === "modules" ? (moduleColumns as any) : (rawPermissionColumns as any)}
-        data={viewMode === "modules" ? filteredModules : filteredRawPermissions}
+        columns={(viewMode === "modules" ? moduleColumns : rawPermissionColumns) as ColumnDef<unknown>[]}
+        data={(viewMode === "modules" ? filteredModules : filteredRawPermissions) as unknown[]}
         isLoading={isLoading}
         error={error ? "Failed to load permissions list from server." : null}
         onRetry={refetch}
