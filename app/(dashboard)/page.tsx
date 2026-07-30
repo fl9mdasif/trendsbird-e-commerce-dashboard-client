@@ -83,7 +83,14 @@ const STATS_CARDS = [
 
 export default function DashboardHomePage() {
   const user = useAppSelector((state) => state.auth.user);
-  const displayName = user?.fullName || user?.name || user?.email || "Admin";
+  const displayName =
+    typeof user?.fullName === "string"
+      ? user.fullName
+      : typeof user?.name === "string"
+      ? user.name
+      : typeof user?.email === "string"
+      ? user.email
+      : "Admin";
 
   return (
     <div className="space-y-8">

@@ -3,9 +3,10 @@
 import React from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { clearSession } from "@/redux/features/authSlice";
-import { removeUser } from "@/services/auth.services";
+import { removeUser, getRoleString } from "@/services/auth.services";
 import { useRouter, usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Shield, ChevronRight, Bell } from "lucide-react";
+import { LogOut, Shield, ChevronRight } from "lucide-react";
 
 export const Topbar: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -28,8 +29,16 @@ export const Topbar: React.FC = () => {
     router.push("/login");
   };
 
-  const displayName = user?.fullName || user?.name || user?.email || "Admin User";
-  const userRole = user?.role || "Admin";
+  const displayName =
+    typeof user?.fullName === "string"
+      ? user.fullName
+      : typeof user?.name === "string"
+      ? user.name
+      : typeof user?.email === "string"
+      ? user.email
+      : "Admin User";
+
+  const userRole = getRoleString(user?.role);
 
   const getBreadcrumbTitle = () => {
     if (pathname === "/") return "Overview";
@@ -59,6 +68,17 @@ export const Topbar: React.FC = () => {
           <Shield className="w-3.5 h-3.5 text-primary" />
           {userRole}
         </Badge>
+
+        {/* Direct Visible Logout Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleLogout}
+          className="gap-2 text-destructive hover:bg-destructive/10 border-destructive/30 font-medium"
+        >
+          <LogOut className="w-4 h-4 text-destructive" />
+          <span className="hidden sm:inline">Log out</span>
+        </Button>
 
         {/* Profile Dropdown */}
         <DropdownMenu>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const token =
     request.cookies.get("accessToken")?.value ||
     request.headers.get("authorization")?.split(" ")[1];
@@ -18,6 +18,9 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
+
+export default proxy;
+export const middleware = proxy;
 
 export const config = {
   matcher: [
