@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/components/ui/toast";
+import { showErrorToast } from "@/lib/utils";
 import { useGetAllPermissionsQuery } from "@/redux/api/permissionApi";
 import { useAssignPermissionMutation, useRemovePermissionMutation } from "@/redux/api/roleApi";
 import { Loader2, Save, Shield, CheckSquare, Square } from "lucide-react";
@@ -168,12 +169,8 @@ export const RoleForm: React.FC<RoleFormProps> = ({
               type: "success",
             });
           }
-        } catch (err: any) {
-          toast({
-            title: "API Action Failed",
-            description: err?.message || "Failed to update permission.",
-            type: "error",
-          });
+        } catch (err: unknown) {
+          showErrorToast(err, "Failed to update permission.");
         }
       }
     }
