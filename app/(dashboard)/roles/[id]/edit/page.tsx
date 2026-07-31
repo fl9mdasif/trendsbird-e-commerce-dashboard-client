@@ -14,6 +14,7 @@ import {
 } from "@/redux/api/roleApi";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { showErrorToast, getErrorMessage } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 
 export default function EditRolePage() {
@@ -26,7 +27,7 @@ export default function EditRolePage() {
   const [assignPermission] = useAssignPermissionMutation();
   const [removePermission] = useRemovePermissionMutation();
 
-  const roleData = roleResponse?.data || roleResponse;
+  const roleData: any = (roleResponse as any)?.data || roleResponse;
 
   const handleUpdateRole = async (data: {
     name: string;
@@ -77,18 +78,14 @@ export default function EditRolePage() {
       });
 
       router.push("/roles");
-    } catch (err: any) {
-      toast({
-        title: "Error Updating Role",
-        description: err?.message || err?.data?.message || "Failed to update role.",
-        type: "error",
-      });
+    } catch (err: unknown) {
+      showErrorToast(err, "Failed to update role.");
     }
   };
 
   if (isLoading) return <LoadingSpinner text="Loading role details..." />;
   if (error || !roleData)
-    return <ErrorState message="Failed to load role information." onRetry={refetch} />;
+    return <ErrorState message={getErrorMessage(error, "Failed to load role information.")} onRetry={refetch} />;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

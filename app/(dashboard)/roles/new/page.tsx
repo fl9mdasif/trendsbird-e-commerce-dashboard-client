@@ -7,6 +7,7 @@ import RoleForm from "@/components/roles/RoleForm";
 import { useCreateRoleMutation, useAssignPermissionMutation } from "@/redux/api/roleApi";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { showErrorToast } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 
 export default function CreateRolePage() {
@@ -46,12 +47,8 @@ export default function CreateRolePage() {
       });
 
       router.push("/roles");
-    } catch (err: any) {
-      toast({
-        title: "Error Creating Role",
-        description: err?.message || err?.data?.message || "Failed to create role.",
-        type: "error",
-      });
+    } catch (err: unknown) {
+      showErrorToast(err, "Failed to create role.");
     }
   };
 

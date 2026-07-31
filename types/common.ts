@@ -70,15 +70,21 @@ export interface IPermission {
   id: string;
   name: string;
   description?: string | null;
+  permissionId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface IRolePermission {
-  roleId: string;
-  permissionId: string;
-  permission?: IPermission;
+  roleId?: string;
+  permissionId?: string;
+  permission?: IPermission | string;
+  id?: string;
+  name?: string;
+  description?: string | null;
 }
+
+export type TPermissionItem = IRolePermission | IPermission | string;
 
 export interface IRole {
   id: string;
@@ -88,7 +94,7 @@ export interface IRole {
   userCount?: number;
   usersCount?: number;
   users?: any[];
-  permissions?: IRolePermission[] | IPermission[] | string[];
+  permissions?: TPermissionItem[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -276,10 +282,13 @@ export type TProduct = IProduct;
 export interface IMedia {
   id: string;
   _id?: string;
+  name?: string;
+  filename?: string;
   url: string;
-  filename: string;
+  thumbnailUrl?: string | null;
   mimeType: string;
-  size: number;
+  sizeBytes?: number;
+  size?: number;
   altText?: string;
   title?: string;
   createdAt?: string;

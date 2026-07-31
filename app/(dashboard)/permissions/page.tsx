@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { usePermission } from "@/hooks/usePermission";
 import { toast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
+import { cn, showErrorToast, getErrorMessage } from "@/lib/utils";
 import { Plus, Shield, CheckCircle, XCircle, Trash2, Edit3, Grid, List } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { IPermission, IApiResponse } from "@/types/common";
@@ -131,12 +131,7 @@ export default function PermissionsPage() {
       });
       refetch();
     } catch (err: unknown) {
-      const errorObj = err as { message?: string; data?: { message?: string } };
-      toast({
-        title: "Error Deleting Permission",
-        description: errorObj?.message || errorObj?.data?.message || "Failed to delete permission.",
-        type: "error",
-      });
+      showErrorToast(err, "Failed to delete permission.");
     }
   };
 
@@ -177,12 +172,7 @@ export default function PermissionsPage() {
       setEditingPermission(null);
       refetch();
     } catch (err: unknown) {
-      const errorObj = err as { message?: string; data?: { message?: string } };
-      toast({
-        title: "Error Updating Permission",
-        description: errorObj?.message || errorObj?.data?.message || "Failed to update permission.",
-        type: "error",
-      });
+      showErrorToast(err, "Failed to update permission.");
     }
   };
 
@@ -364,10 +354,10 @@ export default function PermissionsPage() {
       </PageHeader>
 
       <DataTable
-        columns={viewMode === "modules" ? (moduleColumns as any) : (rawPermissionColumns as any)}
-        data={viewMode === "modules" ? filteredModules : filteredRawPermissions}
+        columns={(viewMode === "modules" ? moduleColumns : rawPermissionColumns) as ColumnDef<unknown>[]}
+        data={(viewMode === "modules" ? filteredModules : filteredRawPermissions) as unknown[]}
         isLoading={isLoading}
-        error={error ? "Failed to load permissions list from server." : null}
+        error={error ? getErrorMessage(error, "Failed to load permissions list from server.") : null}
         onRetry={refetch}
         searchPlaceholder={
           viewMode === "modules" ? "Search module permissions..." : "Search permission names..."
