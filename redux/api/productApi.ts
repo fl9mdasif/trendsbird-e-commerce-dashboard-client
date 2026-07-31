@@ -1,30 +1,30 @@
 import { tagTypes } from "../tag-types";
 import { baseApi } from "./baseApi";
+import { IProduct, ICreateProductInput, IApiResponse } from "@/types/common";
 
 const productApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-
-    // GET /products — public with filters
-    getAllProducts: build.query({
-      query: (params?: Record<string, unknown>) => ({
+    // GET /products (getAllProducts)
+    getAllProducts: build.query<IApiResponse<IProduct[]>, Record<string, unknown> | void>({
+      query: (params) => ({
         url: "/products",
         method: "GET",
-        params,
+        params: params || {},
       }),
       providesTags: [tagTypes.products],
     }),
 
-    // GET /products/:id
-    getSingleProduct: build.query({
-      query: (id: string) => ({
+    // GET /products/:id (getSingleProduct)
+    getSingleProduct: build.query<IApiResponse<IProduct>, string>({
+      query: (id) => ({
         url: `/products/${id}`,
         method: "GET",
       }),
       providesTags: [tagTypes.products],
     }),
 
-    // POST /products — admin/superAdmin
-    createProduct: build.mutation({
+    // POST /products (createProduct)
+    createProduct: build.mutation<IApiResponse<IProduct>, ICreateProductInput>({
       query: (data) => ({
         url: "/products",
         method: "POST",
@@ -33,9 +33,9 @@ const productApi = baseApi.injectEndpoints({
       invalidatesTags: [tagTypes.products],
     }),
 
-    // PATCH /products/:id — admin/superAdmin
-    updateProduct: build.mutation({
-      query: ({ id, data }: { id: string; data: unknown }) => ({
+    // PATCH /products/:id (updateProduct)
+    updateProduct: build.mutation<IApiResponse<IProduct>, { id: string; data: Partial<ICreateProductInput> }>({
+      query: ({ id, data }) => ({
         url: `/products/${id}`,
         method: "PATCH",
         data,
@@ -43,42 +43,13 @@ const productApi = baseApi.injectEndpoints({
       invalidatesTags: [tagTypes.products],
     }),
 
-    // PATCH /products/:id/toggle-featured
-    toggleFeatured: build.mutation({
-      query: (id: string) => ({
-        url: `/products/${id}/toggle-featured`,
-        method: "PATCH",
-      }),
-      invalidatesTags: [tagTypes.products],
-    }),
-
-    // PATCH /products/:productId/variants/:variantId
-    updateVariant: build.mutation({
-      query: ({ productId, variantId, data }: { productId: string; variantId: string; data: unknown }) => ({
-        url: `/products/${productId}/variants/${variantId}`,
-        method: "PATCH",
-        data,
-      }),
-      invalidatesTags: [tagTypes.products],
-    }),
-
-    // DELETE /products/:id — admin/superAdmin
-    deleteProduct: build.mutation({
-      query: (id: string) => ({
+    // DELETE /products/:id (deleteProduct)
+    deleteProduct: build.mutation<IApiResponse<IProduct>, string>({
+      query: (id) => ({
         url: `/products/${id}`,
         method: "DELETE",
       }),
       invalidatesTags: [tagTypes.products],
-    }),
-
-    // POST /products/:productId/review — user
-    addReview: build.mutation({
-      query: ({ productId, data }: { productId: string; data: { rating: number; orderId?: string; variantId?: string } }) => ({
-        url: `/products/${productId}/review`,
-        method: "POST",
-        data,
-      }),
-      invalidatesTags: [tagTypes.products, tagTypes.orders],
     }),
   }),
 });
@@ -88,8 +59,5 @@ export const {
   useGetSingleProductQuery,
   useCreateProductMutation,
   useUpdateProductMutation,
-  useToggleFeaturedMutation,
-  useUpdateVariantMutation,
   useDeleteProductMutation,
-  useAddReviewMutation,
 } = productApi;

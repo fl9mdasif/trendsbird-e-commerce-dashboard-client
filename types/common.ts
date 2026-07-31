@@ -190,83 +190,6 @@ export interface ICategory {
   updatedAt?: string;
 }
 
-// ── Product & Variant Interfaces ─────────────────────────────────────────────
-export interface IVariantAttributeInput {
-  attributeId: string;
-  attributeValueId: string;
-}
-
-export interface IVariantInput {
-  _id?: string;
-  id?: string;
-  name?: string;
-  price: number;
-  salePrice?: number | null;
-  discountPrice?: number | null;
-  stock: number;
-  sku: string;
-  weight?: number;
-  isAvailable?: boolean;
-  attributes?: IVariantAttributeInput[];
-}
-
-export type TVariant = IVariantInput;
-
-export interface ICreateProductInput {
-  name: string;
-  description?: string | null;
-  hasVariants?: boolean;
-  price?: number | null;
-  salePrice?: number | null;
-  stock?: number | null;
-  sku?: string | null;
-  brandId?: string | null;
-  categoryIds: string[];
-  mediaIds?: string[];
-  variants?: IVariantInput[];
-}
-
-export interface IUpdateProductInput {
-  name?: string;
-  description?: string | null;
-  hasVariants?: boolean;
-  price?: number | null;
-  salePrice?: number | null;
-  stock?: number | null;
-  sku?: string | null;
-  brandId?: string | null;
-  categoryIds?: string[];
-  mediaIds?: string[];
-  variants?: IVariantInput[];
-}
-
-export interface IProduct {
-  _id?: string;
-  id?: string;
-  name: string;
-  slug?: string;
-  description?: string | null;
-  hasVariants?: boolean;
-  price?: number | null;
-  salePrice?: number | null;
-  stock?: number | null;
-  sku?: string | null;
-  brandId?: string | null;
-  brand?: IBrand | null;
-  category?: string | ICategory;
-  categories?: ICategory[];
-  categoryIds?: string[];
-  thumbnail?: string;
-  gallery?: string[];
-  mediaIds?: string[];
-  variants?: IVariantInput[];
-  status?: "active" | "draft" | "archived";
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export type TProduct = IProduct;
-
 // ── Media Interfaces ────────────────────────────────────────────────────────
 export interface IMedia {
   id: string;
@@ -283,3 +206,71 @@ export interface IMedia {
   createdAt?: string;
   updatedAt?: string;
 }
+
+// ── Product & Variant Interfaces ─────────────────────────────────────────────
+export interface IVariantAttributeInput {
+  attributeId: string;
+  attributeValueId: string;
+  attribute?: IAttribute;
+  attributeValue?: IAttributeValue;
+}
+
+export interface IVariantInput {
+  id?: string;
+  _id?: string;
+  productId?: string;
+  price: number;
+  salePrice?: number | null;
+  stock: number;
+  sku: string;
+  attributes: IVariantAttributeInput[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface IProductCategoryLink {
+  productId: string;
+  categoryId: string;
+  category: ICategory;
+}
+
+export interface IProductMediaLink {
+  productId: string;
+  mediaId: string;
+  media: IMedia;
+}
+
+export interface ICreateProductInput {
+  name: string;
+  description?: string | null;
+  hasVariants: boolean;
+  price?: number | null;
+  salePrice?: number | null;
+  stock?: number | null;
+  sku?: string | null;
+  brandId?: string | null;
+  categoryIds: string[];
+  mediaIds?: string[];
+  variants?: IVariantInput[];
+}
+
+export interface IProduct {
+  id: string;
+  _id?: string;
+  name: string;
+  description?: string | null;
+  hasVariants: boolean;
+  price?: number | null;
+  salePrice?: number | null;
+  stock?: number | null;
+  sku?: string | null;
+  brandId?: string | null;
+  brand?: IBrand | null;
+  categories?: IProductCategoryLink[];
+  media?: IProductMediaLink[];
+  variants?: IVariantInput[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type TProduct = IProduct;

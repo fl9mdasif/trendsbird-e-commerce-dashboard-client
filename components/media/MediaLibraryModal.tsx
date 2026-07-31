@@ -18,7 +18,7 @@ import {
   useUploadBulkMediaMutation,
 } from "@/redux/api/mediaApi";
 import { toast } from "@/components/ui/toast";
-import { showErrorToast } from "@/lib/utils";
+import { showErrorToast, cn } from "@/lib/utils";
 import {
   UploadCloud,
   ImageIcon,
