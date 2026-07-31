@@ -282,10 +282,13 @@ export type TProduct = IProduct;
 export interface IMedia {
   id: string;
   _id?: string;
+  name?: string;
+  filename?: string;
   url: string;
-  filename: string;
+  thumbnailUrl?: string | null;
   mimeType: string;
-  size: number;
+  sizeBytes?: number;
+  size?: number;
   altText?: string;
   title?: string;
   createdAt?: string;
