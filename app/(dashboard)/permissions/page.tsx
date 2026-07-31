@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
+import { PermissionEditModal } from "@/components/permissions/PermissionEditModal";
 import {
   useGetAllPermissionsQuery,
   useDeletePermissionMutation,
@@ -11,51 +12,27 @@ import {
 } from "@/redux/api/permissionApi";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { usePermission } from "@/hooks/usePermission";
 import { toast } from "@/components/ui/toast";
 import { cn, showErrorToast, getErrorMessage } from "@/lib/utils";
 import { Plus, Shield, CheckCircle, XCircle, Trash2, Edit3, Grid, List } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { IPermission, IApiResponse } from "@/types/common";
-
-interface IFormattedModule {
-  module: string;
-  actions: string[];
-}
-
-const DEFAULT_MODULES: IFormattedModule[] = [
-  { module: "dashboard", actions: ["watch", "read"] },
-  { module: "permission", actions: ["watch", "read", "create", "update", "delete"] },
-  { module: "role", actions: ["watch", "read", "create", "update", "delete"] },
-  { module: "user", actions: ["watch", "read", "create", "update", "delete"] },
-  { module: "media", actions: ["watch", "read", "create", "update", "delete", "upload"] },
-  { module: "category", actions: ["watch", "read", "create", "update", "delete"] },
-  { module: "brand", actions: ["watch", "read", "create", "update", "delete"] },
-  { module: "attribute", actions: ["watch", "read", "create", "update", "delete"] },
-  { module: "product", actions: ["watch", "read", "create", "update", "delete"] },
-];
+import {
+  formatPermissionsToModules,
+  filterFormattedModules,
+  filterRawPermissions,
+  IFormattedModule,
+} from "./function.permission";
 
 export default function PermissionsPage() {
   const { can } = usePermission();
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<"modules" | "all">("modules");
-
-  // Edit Modal State
   const [editingPermission, setEditingPermission] = useState<IPermission | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editDescription, setEditDescription] = useState("");
 
-  // Fetch all permissions (limit: 100)
+  // Fetch all permissions from DB
   const { data: response, isLoading, error, refetch } = useGetAllPermissionsQuery({
     search: searchTerm,
     page: 1,
@@ -65,7 +42,6 @@ export default function PermissionsPage() {
   const [deletePermission] = useDeletePermissionMutation();
   const [updatePermission, { isLoading: isUpdating }] = useUpdatePermissionMutation();
 
-  // Memoize permissionsList to satisfy ESLint react-hooks/exhaustive-deps
   const permissionsList = useMemo<IPermission[]>(() => {
     if (!response) return [];
     if (Array.isArray(response)) return response;
@@ -75,50 +51,18 @@ export default function PermissionsPage() {
     return [];
   }, [response]);
 
-  // Group flat permission items from DB by module
-  const formattedModules = useMemo<IFormattedModule[]>(() => {
-    if (permissionsList.length > 0) {
-      const groups: Record<string, string[]> = {};
-
-      permissionsList.forEach((item) => {
-        const name = item.name;
-        if (name && typeof name === "string") {
-          if (name.includes(":")) {
-            const [mod, act] = name.split(":");
-            const cleanMod = mod.toLowerCase().trim();
-            const cleanAct = act.toLowerCase().trim();
-            if (!groups[cleanMod]) groups[cleanMod] = [];
-            if (!groups[cleanMod].includes(cleanAct)) groups[cleanMod].push(cleanAct);
-          } else {
-            // Non-colon permission (e.g. "test")
-            const cleanMod = name.toLowerCase().trim();
-            if (!groups[cleanMod]) groups[cleanMod] = [];
-            if (!groups[cleanMod].includes("read")) groups[cleanMod].push("read");
-          }
-        }
-      });
-
-      const allModulesSet = new Set([
-        ...DEFAULT_MODULES.map((m) => m.module),
-        ...Object.keys(groups),
-      ]);
-
-      return Array.from(allModulesSet).map((mod) => {
-        const dbActions = groups[mod] || [];
-        const defaultActions = DEFAULT_MODULES.find((m) => m.module === mod)?.actions || [];
-        const mergedActions = Array.from(new Set([...dbActions, ...defaultActions]));
-
-        return {
-          module: mod,
-          actions: mergedActions,
-        };
-      });
-    }
-
-    return DEFAULT_MODULES;
+  const formattedModules = useMemo(() => {
+    return formatPermissionsToModules(permissionsList);
   }, [permissionsList]);
 
-  // Handle Delete Permission
+  const filteredModules = useMemo(() => {
+    return filterFormattedModules(formattedModules, searchTerm);
+  }, [formattedModules, searchTerm]);
+
+  const filteredRawPermissions = useMemo(() => {
+    return filterRawPermissions(permissionsList, searchTerm);
+  }, [permissionsList, searchTerm]);
+
   const handleDeletePermission = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to delete permission '${name}'?`)) return;
 
@@ -135,31 +79,15 @@ export default function PermissionsPage() {
     }
   };
 
-  // Open Edit Modal
-  const openEditModal = (item: IPermission) => {
-    setEditingPermission(item);
-    setEditName(item.name || "");
-    setEditDescription(item.description || "");
-  };
-
-  // Handle Save Permission Edit
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = async (data: { name: string; description: string }) => {
     if (!editingPermission) return;
-    if (!editName.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Permission name cannot be empty.",
-        type: "error",
-      });
-      return;
-    }
 
     try {
       await updatePermission({
         id: editingPermission.id,
         data: {
-          name: editName.trim(),
-          description: editDescription.trim(),
+          name: data.name,
+          description: data.description,
         },
       }).unwrap();
 
@@ -175,17 +103,6 @@ export default function PermissionsPage() {
       showErrorToast(err, "Failed to update permission.");
     }
   };
-
-  // Filter modules based on search term
-  const filteredModules = formattedModules.filter((m) =>
-    m.module.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Filter raw permissions based on search term
-  const filteredRawPermissions = permissionsList.filter((item) => {
-    const permName = item.name || "";
-    return permName.toLowerCase().includes(searchTerm.toLowerCase());
-  });
 
   // Table Columns for Grouped View
   const moduleColumns: ColumnDef<IFormattedModule>[] = [
@@ -204,9 +121,7 @@ export default function PermissionsPage() {
       header: "Available Actions",
       cell: ({ row }) => {
         const actions: string[] = row.original.actions || [];
-        const displayActions = Array.from(
-          new Set([...actions, "read", "create", "update", "delete"])
-        );
+        const displayActions = Array.from(new Set([...actions, "read", "create", "update", "delete"]));
 
         return (
           <div className="flex flex-wrap items-center gap-2">
@@ -242,7 +157,7 @@ export default function PermissionsPage() {
     },
   ];
 
-  // Table Columns for All Individual DB Permissions List (with Edit & Delete)
+  // Table Columns for All Individual DB Permissions List
   const rawPermissionColumns: ColumnDef<IPermission>[] = [
     {
       accessorKey: "name",
@@ -266,22 +181,17 @@ export default function PermissionsPage() {
     {
       accessorKey: "createdAt",
       header: "Created Date",
-      cell: ({ row }) => {
-        const dateStr = row.original.createdAt;
-        return (
-          <span className="text-xs text-muted-foreground">
-            {dateStr ? new Date(dateStr).toLocaleDateString() : "—"}
-          </span>
-        );
-      },
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">
+          {row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : "—"}
+        </span>
+      ),
     },
     {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
         const item = row.original;
-        const itemId = item.id;
-
         return (
           <div className="flex items-center gap-2">
             {can("permission:update") && (
@@ -289,7 +199,7 @@ export default function PermissionsPage() {
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 p-0 text-primary"
-                onClick={() => openEditModal(item)}
+                onClick={() => setEditingPermission(item)}
                 title="Edit Permission"
               >
                 <Edit3 className="w-4 h-4" />
@@ -300,7 +210,7 @@ export default function PermissionsPage() {
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                onClick={() => handleDeletePermission(itemId, item.name)}
+                onClick={() => handleDeletePermission(item.id, item.name)}
                 title="Delete Permission"
               >
                 <Trash2 className="w-4 h-4" />
@@ -319,7 +229,6 @@ export default function PermissionsPage() {
         description="View, edit, and configure system module action permissions."
       >
         <div className="flex items-center gap-3">
-          {/* View Mode Switcher */}
           <div className="flex items-center rounded-lg border border-border bg-card p-1">
             <Button
               variant={viewMode === "modules" ? "secondary" : "ghost"}
@@ -359,9 +268,7 @@ export default function PermissionsPage() {
         isLoading={isLoading}
         error={error ? getErrorMessage(error, "Failed to load permissions list from server.") : null}
         onRetry={refetch}
-        searchPlaceholder={
-          viewMode === "modules" ? "Search module permissions..." : "Search permission names..."
-        }
+        searchPlaceholder={viewMode === "modules" ? "Search module permissions..." : "Search permission names..."}
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         pageIndex={page}
@@ -370,47 +277,13 @@ export default function PermissionsPage() {
         emptyMessage="No permissions found."
       />
 
-      {/* Edit Permission Modal */}
       {editingPermission && (
-        <Dialog open={Boolean(editingPermission)} onOpenChange={() => setEditingPermission(null)}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                Edit Permission
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="editName">Permission Identifier *</Label>
-                <Input
-                  id="editName"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  placeholder="e.g. test, report:read"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editDescription">Description</Label>
-                <Input
-                  id="editDescription"
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="Permission description..."
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingPermission(null)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveEdit} disabled={isUpdating}>
-                {isUpdating ? "Saving..." : "Save Changes"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <PermissionEditModal
+          permission={editingPermission}
+          onClose={() => setEditingPermission(null)}
+          onSubmit={handleSaveEdit}
+          isLoading={isUpdating}
+        />
       )}
     </div>
   );

@@ -138,65 +138,54 @@ export interface IUser {
   updatedAt?: string;
 }
 
-// ── Catalog (Brand, Attribute, Category) Interfaces ─────────────────────────
+// ── Brand Interfaces ─────────────────────────────────────────────────────────
 export interface ICreateBrandInput {
   name: string;
-  logo?: string;
-  description?: string;
 }
 
 export interface IBrand {
   id: string;
   _id?: string;
   name: string;
-  slug?: string;
-  logo?: string | null;
-  description?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
 
+// ── Attribute & Attribute Value Interfaces ──────────────────────────────────
 export interface ICreateAttributeInput {
   name: string;
-  type?: "dropdown" | "radio" | "color" | "image";
-  values?: string[];
 }
 
 export interface IAttributeValue {
   id: string;
+  _id?: string;
+  attributeId: string;
   value: string;
-  hexCode?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface IAttribute {
   id: string;
   _id?: string;
   name: string;
-  type?: string;
-  values?: IAttributeValue[] | string[];
   createdAt?: string;
   updatedAt?: string;
+  values?: IAttributeValue[];
 }
 
+// ── Category Interfaces ──────────────────────────────────────────────────────
 export interface ICreateCategoryInput {
   name: string;
   parentId?: string | null;
-  description?: string;
-  order?: number;
-  isActive?: boolean;
 }
 
 export interface ICategory {
   id: string;
   _id?: string;
   name: string;
-  slug: string;
-  description?: string | null;
   parentId?: string | null;
-  parent?: ICategory | null;
   children?: ICategory[];
-  isActive?: boolean;
-  order?: number;
   createdAt?: string;
   updatedAt?: string;
 }
