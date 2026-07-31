@@ -1,68 +1,70 @@
 import { tagTypes } from "../tag-types";
 import { baseApi } from "./baseApi";
+import {
+  ICategory,
+  ICreateCategoryInput,
+  IApiResponse,
+} from "@/types/common";
 
 const categoryApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    createCategory: build.mutation({
+    // GET /categories (getAllCategories)
+    getAllCategories: build.query<IApiResponse<ICategory[]>, { tree?: string } | void>({
+      query: (params) => ({
+        url: "/categories",
+        method: "GET",
+        params: params || {},
+      }),
+      providesTags: [tagTypes.categories],
+    }),
+
+    // GET /categories/:id (getSingleCategory)
+    getSingleCategory: build.query<IApiResponse<ICategory>, string>({
+      query: (id) => ({
+        url: `/categories/${id}`,
+        method: "GET",
+      }),
+      providesTags: [tagTypes.categories],
+    }),
+
+    // POST /categories (createCategory)
+    createCategory: build.mutation<IApiResponse<ICategory>, ICreateCategoryInput>({
       query: (data) => ({
         url: "/categories",
         method: "POST",
         data,
       }),
-      invalidatesTags: [tagTypes.categories]
+      invalidatesTags: [tagTypes.categories],
     }),
 
-    getAllCategories: build.query({
-      query: () => ({
-        url: "/categories",
-        method: "GET",
-      }),
-      providesTags: [tagTypes.categories]
-    }),
-
-    getSingleCategory: build.query({
-      query: (id) => ({
-        url: `/categories/${id}`,
-        method: "GET",
-      }),
-      providesTags: [tagTypes.categories]
-    }),
-
-    updateCategory: build.mutation({
+    // PATCH /categories/:id (updateCategory)
+    updateCategory: build.mutation<
+      IApiResponse<ICategory>,
+      { id: string; data: Partial<ICreateCategoryInput> }
+    >({
       query: ({ id, data }) => ({
         url: `/categories/${id}`,
         method: "PATCH",
         data,
       }),
-      invalidatesTags: [tagTypes.categories]
-
+      invalidatesTags: [tagTypes.categories],
     }),
 
-    toggleCategoryStatus: build.mutation({
-      query: (id) => ({
-        url: `/categories/${id}/toggle-status`,
-        method: "PATCH",
-      }),
-      invalidatesTags: [tagTypes.categories]
-
-    }),
-
-    deleteCategory: build.mutation({
+    // DELETE /categories/:id (deleteCategory)
+    deleteCategory: build.mutation<IApiResponse<ICategory>, string>({
       query: (id) => ({
         url: `/categories/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: [tagTypes.categories]
-
+      invalidatesTags: [tagTypes.categories],
     }),
   }),
 });
 
 export const {
-  useCreateCategoryMutation,
   useGetAllCategoriesQuery,
   useGetSingleCategoryQuery,
+  useCreateCategoryMutation,
   useUpdateCategoryMutation,
-  useToggleCategoryStatusMutation,
   useDeleteCategoryMutation,
 } = categoryApi;
