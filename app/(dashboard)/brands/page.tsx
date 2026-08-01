@@ -5,6 +5,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { BrandGrid } from "@/components/brands/BrandGrid";
 import { BrandModal } from "@/components/brands/BrandModal";
+import { GridSkeleton, TableSkeleton } from "@/components/shared/Skeletons";
 import {
   useGetAllBrandsQuery,
   useCreateBrandMutation,
@@ -17,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePermission } from "@/hooks/usePermission";
 import { toast } from "@/components/ui/toast";
 import { showErrorToast, getErrorMessage } from "@/lib/utils";
-import { Plus, Edit3, Trash2, Tag, Search, Grid, List, Loader2 } from "lucide-react";
+import { Plus, Edit3, Trash2, Tag, Search, Grid, List } from "lucide-react";
 import { ColumnDef, CellContext } from "@tanstack/react-table";
 import { IBrand, IApiResponse } from "@/types/common";
 import { filterBrandsBySearch } from "./function.brand";
@@ -172,10 +173,11 @@ export default function BrandsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span>Loading brands from server...</span>
-        </div>
+        viewMode === "grid" ? (
+          <GridSkeleton count={6} cols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" />
+        ) : (
+          <TableSkeleton rows={5} />
+        )
       ) : error ? (
         <div className="text-center py-16 border border-border rounded-xl bg-card p-6">
           <p className="text-destructive font-medium text-sm">{getErrorMessage(error, "Failed to load brands.")}</p>

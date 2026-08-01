@@ -53,7 +53,7 @@ export default function UserForm({
 
   // Fetch roles list for selection
   const { data: rolesResponse, isLoading: isLoadingRoles } = useGetAllRolesQuery();
-  const rolesList: IRole[] = (rolesResponse as any)?.data || rolesResponse || [];
+  const rolesList: IRole[] = rolesResponse ?.data || rolesResponse || [];
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -161,7 +161,7 @@ export default function UserForm({
             <Label htmlFor="role" className="font-semibold text-sm">
               Assigned Role *
             </Label>
-            <Select value={roleId} onValueChange={setRoleId} disabled={isLoadingRoles}>
+            <Select value={roleId} onValueChange={(val) => setRoleId(val || "")} disabled={isLoadingRoles}>
               <SelectTrigger className="w-full">
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-indigo-500" />

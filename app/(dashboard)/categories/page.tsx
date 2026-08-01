@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { CategoryTreeNode } from "@/components/categories/CategoryTreeNode";
+import { TreeSkeleton, TableSkeleton } from "@/components/shared/Skeletons";
 import {
   useGetAllCategoriesQuery,
   useDeleteCategoryMutation,
@@ -27,7 +28,7 @@ import {
 } from "lucide-react";
 import { ColumnDef, CellContext } from "@tanstack/react-table";
 import { ICategory, IApiResponse } from "@/types/common";
-import { filterCategoryTree } from "./function.category";
+import { buildTreeFromCategories, filterCategoryTree } from "./function.category";
 
 export default function CategoriesPage() {
   const { can } = usePermission();
@@ -41,15 +42,29 @@ export default function CategoriesPage() {
 
   const [deleteCategory] = useDeleteCategoryMutation();
 
-  const treeCategories: ICategory[] =
-    (treeRes as IApiResponse<ICategory[]>)?.data ||
-    (treeRes as unknown as ICategory[]) ||
-    [];
+  const rawTreeCategories: ICategory[] = useMemo(() => {
+    if (!treeRes) return [];
+    if (Array.isArray(treeRes)) return treeRes;
+    if (Array.isArray((treeRes as IApiResponse<ICategory[]>).data)) {
+      return (treeRes as IApiResponse<ICategory[]>).data;
+    }
+    return [];
+  }, [treeRes]);
 
-  const flatCategories: ICategory[] =
-    (flatRes as IApiResponse<ICategory[]>)?.data ||
-    (flatRes as unknown as ICategory[]) ||
-    [];
+  const flatCategories: ICategory[] = useMemo(() => {
+    if (!flatRes) return [];
+    if (Array.isArray(flatRes)) return flatRes;
+    if (Array.isArray((flatRes as IApiResponse<ICategory[]>).data)) {
+      return (flatRes as IApiResponse<ICategory[]>).data;
+    }
+    return [];
+  }, [flatRes]);
+
+  // Build clean hierarchical tree ensuring subcategories are strictly nested under parents
+  const structuredTreeCategories = useMemo(() => {
+    const combinedList = rawTreeCategories.length > 0 ? rawTreeCategories : flatCategories;
+    return buildTreeFromCategories(combinedList);
+  }, [rawTreeCategories, flatCategories]);
 
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to delete category '${name}'?`)) return;
@@ -67,7 +82,20 @@ export default function CategoriesPage() {
     }
   };
 
-  const filteredTreeCategories = filterCategoryTree(treeCategories, searchTerm);
+  const filteredTreeCategories = useMemo(() => {
+    return filterCategoryTree(structuredTreeCategories, searchTerm);
+  }, [structuredTreeCategories, searchTerm]);
+
+  // Split tree categories into independent 2-column masonry stacks so expanding one card does not leave empty whitespace in the other column
+  const leftColCategories = useMemo(
+    () => filteredTreeCategories.filter((_, idx) => idx % 2 === 0),
+    [filteredTreeCategories]
+  );
+
+  const rightColCategories = useMemo(
+    () => filteredTreeCategories.filter((_, idx) => idx % 2 !== 0),
+    [filteredTreeCategories]
+  );
 
   // Flat Table Columns
   const tableColumns: ColumnDef<ICategory>[] = [
@@ -196,52 +224,71 @@ export default function CategoriesPage() {
         />
       </div>
 
-      {/* Category Tree View */}
+      {/* Category Tree View (Independent Masonry 2-Column Stacks) */}
       {viewMode === "tree" ? (
-        <div className="space-y-2">
-          {isTreeLoading ? (
-            <div className="text-center py-16 text-muted-foreground text-sm">
-              Loading category hierarchy tree...
+        isTreeLoading ? (
+          <TreeSkeleton count={4} />
+        ) : treeError ? (
+          <div className="text-center py-12 border border-border rounded-xl bg-card p-4">
+            <p className="text-destructive text-sm font-medium">
+              {getErrorMessage(treeError, "Failed to load category tree.")}
+            </p>
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-2">
+              Retry Loading
+            </Button>
+          </div>
+        ) : filteredTreeCategories.length === 0 ? (
+          <div className="text-center py-16 border border-dashed border-border rounded-xl bg-card/40 text-muted-foreground text-sm">
+            No categories found in tree.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+            {/* Left Column Stack */}
+            <div className="space-y-4">
+              {leftColCategories.map((cat) => (
+                <CategoryTreeNode
+                  key={cat.id || cat._id}
+                  category={cat}
+                  onDelete={handleDelete}
+                  canCreate={can("category:create")}
+                  canUpdate={can("category:update")}
+                  canDelete={can("category:delete")}
+                />
+              ))}
             </div>
-          ) : treeError ? (
-            <div className="text-center py-12 border border-border rounded-xl bg-card p-4">
-              <p className="text-destructive text-sm font-medium">
-                {getErrorMessage(treeError, "Failed to load category tree.")}
-              </p>
-              <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-2">
-                Retry Loading
-              </Button>
+
+            {/* Right Column Stack */}
+            <div className="space-y-4">
+              {rightColCategories.map((cat) => (
+                <CategoryTreeNode
+                  key={cat.id || cat._id}
+                  category={cat}
+                  onDelete={handleDelete}
+                  canCreate={can("category:create")}
+                  canUpdate={can("category:update")}
+                  canDelete={can("category:delete")}
+                />
+              ))}
             </div>
-          ) : filteredTreeCategories.length === 0 ? (
-            <div className="text-center py-16 border border-dashed border-border rounded-xl bg-card/40 text-muted-foreground text-sm">
-              No categories found in tree.
-            </div>
-          ) : (
-            filteredTreeCategories.map((cat) => (
-              <CategoryTreeNode
-                key={cat.id || cat._id}
-                category={cat}
-                onDelete={handleDelete}
-                canCreate={can("category:create")}
-                canUpdate={can("category:update")}
-                canDelete={can("category:delete")}
-              />
-            ))
-          )}
-        </div>
+          </div>
+        )
       ) : (
         /* Flat Table View */
-        <DataTable
-          columns={tableColumns as ColumnDef<ICategory>[]}
-          data={flatCategories.filter((c) => c.name.toLowerCase().includes(searchTerm.toLowerCase()))}
-          isLoading={isTreeLoading}
-          error={treeError ? getErrorMessage(treeError, "Failed to load categories.") : null}
-          onRetry={refetch}
-          searchPlaceholder="Search categories..."
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
-          emptyMessage="No categories found."
-        />
+        isTreeLoading ? (
+          <TableSkeleton rows={5} />
+        ) : (
+          <DataTable
+            columns={tableColumns as ColumnDef<ICategory>[]}
+            data={flatCategories.filter((c) => c.name.toLowerCase().includes(searchTerm.toLowerCase()))}
+            isLoading={isTreeLoading}
+            error={treeError ? getErrorMessage(treeError, "Failed to load categories.") : null}
+            onRetry={refetch}
+            searchPlaceholder="Search categories..."
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            emptyMessage="No categories found."
+          />
+        )
       )}
     </div>
   );

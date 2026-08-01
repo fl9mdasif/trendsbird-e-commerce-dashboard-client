@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { usePermission } from "@/hooks/usePermission";
 import { cn, showErrorToast, getErrorMessage } from "@/lib/utils";
-import { Plus, Edit3, Trash2, Shield, UserCheck, Eye, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Plus, Edit3, Trash2, Shield, Eye, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { ColumnDef, CellContext } from "@tanstack/react-table";
 import { toast } from "@/components/ui/toast";
 import { IRole, IApiResponse, TPermissionItem } from "@/types/common";
@@ -114,19 +114,6 @@ export default function RolesPage() {
           </div>
         </div>
       ),
-    },
-    {
-      accessorKey: "userCount",
-      header: "Users Count",
-      cell: ({ row }: CellContext<IRole, unknown>) => {
-        const count = row.original.userCount ?? row.original.usersCount ?? row.original.users?.length ?? 0;
-        return (
-          <Badge variant="outline" className="gap-1 px-2.5 py-0.5">
-            <UserCheck className="w-3 h-3 text-emerald-500" />
-            <span>{count} Users</span>
-          </Badge>
-        );
-      },
     },
     {
       accessorKey: "permissions",

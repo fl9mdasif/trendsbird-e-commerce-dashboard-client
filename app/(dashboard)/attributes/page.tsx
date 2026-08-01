@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import PageHeader from "@/components/shared/PageHeader";
+import { GridSkeleton } from "@/components/shared/Skeletons";
 import {
   useGetAllAttributesQuery,
   useCreateAttributeMutation,
@@ -33,9 +34,7 @@ import {
   Search,
   Loader2,
   X,
-  Check,
-  Tag,
-  Layers,
+  Sparkles,
 } from "lucide-react";
 import { IAttribute, IAttributeValue, IApiResponse } from "@/types/common";
 
@@ -48,30 +47,26 @@ export default function AttributesPage() {
   const [editingAttr, setEditingAttr] = useState<IAttribute | null>(null);
   const [attrName, setAttrName] = useState("");
 
-  // Inline Value Add State (key: attributeId -> string)
-  const [newValuesMap, setNewValuesMap] = useState<Record<string, string>>({});
-  const [addingValueAttrId, setAddingValueAttrId] = useState<string | null>(null);
-
-  // Edit Value Modal State
-  const [editingValueObj, setEditingValueObj] = useState<{
-    attributeId: string;
-    value: IAttributeValue;
+  // Value Modal State
+  const [isValueModalOpen, setIsValueModalOpen] = useState(false);
+  const [editingValue, setEditingValue] = useState<{
+    attrId: string;
+    val: IAttributeValue;
   } | null>(null);
-  const [editValueText, setEditValueText] = useState("");
+  const [valueText, setValueText] = useState("");
+
+  // Inline Add Value Input per Attribute Card
+  const [inlineValueInput, setInlineValueInput] = useState<Record<string, string>>({});
 
   // Fetch Attributes from Server
-  const { data: response, isLoading, error, refetch } = useGetAllAttributesQuery({
-    search: searchTerm,
-    page: 1,
-    limit: 50,
-  });
+  const { data: response, isLoading, error, refetch } = useGetAllAttributesQuery();
 
   const [createAttribute, { isLoading: isCreatingAttr }] = useCreateAttributeMutation();
   const [updateAttribute, { isLoading: isUpdatingAttr }] = useUpdateAttributeMutation();
   const [deleteAttribute] = useDeleteAttributeMutation();
 
-  const [createAttributeValue, { isLoading: isCreatingValue }] = useCreateAttributeValueMutation();
-  const [updateAttributeValue, { isLoading: isUpdatingValue }] = useUpdateAttributeValueMutation();
+  const [createAttributeValue, { isLoading: isCreatingVal }] = useCreateAttributeValueMutation();
+  const [updateAttributeValue, { isLoading: isUpdatingVal }] = useUpdateAttributeValueMutation();
   const [deleteAttributeValue] = useDeleteAttributeValueMutation();
 
   const attributesList: IAttribute[] = useMemo(() => {
@@ -83,53 +78,42 @@ export default function AttributesPage() {
     return [];
   }, [response]);
 
-  // Open Create Main Attribute Modal
+  const filteredAttributes = useMemo(() => {
+    if (!searchTerm.trim()) return attributesList;
+    const lower = searchTerm.toLowerCase().trim();
+    return attributesList.filter(
+      (attr) =>
+        attr.name.toLowerCase().includes(lower) ||
+        attr.values?.some((v) => v.value.toLowerCase().includes(lower))
+    );
+  }, [attributesList, searchTerm]);
+
+  // Handle Attribute Modal Open
   const openCreateAttrModal = () => {
     setEditingAttr(null);
     setAttrName("");
     setIsAttrModalOpen(true);
   };
 
-  // Open Edit Main Attribute Modal
   const openEditAttrModal = (attr: IAttribute) => {
     setEditingAttr(attr);
     setAttrName(attr.name || "");
     setIsAttrModalOpen(true);
   };
 
-  // Save Main Attribute (Create or Edit)
+  // Save Attribute
   const handleSaveAttribute = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!attrName.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Attribute name is required.",
-        type: "error",
-      });
-      return;
-    }
+    if (!attrName.trim()) return;
 
     try {
       if (editingAttr) {
-        const attrId = editingAttr.id || editingAttr._id || "";
-        await updateAttribute({
-          id: attrId,
-          data: { name: attrName.trim() },
-        }).unwrap();
-
-        toast({
-          title: "Attribute Updated",
-          description: `Attribute '${attrName}' updated successfully.`,
-          type: "success",
-        });
+        const id = editingAttr.id || editingAttr._id || "";
+        await updateAttribute({ id, data: { name: attrName.trim() } }).unwrap();
+        toast({ title: "Attribute Updated", description: `Attribute updated.`, type: "success" });
       } else {
         await createAttribute({ name: attrName.trim() }).unwrap();
-
-        toast({
-          title: "Attribute Created",
-          description: `Attribute '${attrName}' created successfully.`,
-          type: "success",
-        });
+        toast({ title: "Attribute Created", description: `Attribute created.`, type: "success" });
       }
 
       setIsAttrModalOpen(false);
@@ -141,107 +125,84 @@ export default function AttributesPage() {
     }
   };
 
-  // Delete Main Attribute
+  // Delete Attribute
   const handleDeleteAttribute = async (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete attribute '${name}' and all its values?`)) return;
+    if (!window.confirm(`Are you sure you want to delete attribute '${name}'?`)) return;
 
     try {
       await deleteAttribute(id).unwrap();
-      toast({
-        title: "Attribute Deleted",
-        description: `Attribute '${name}' deleted successfully.`,
-        type: "success",
-      });
+      toast({ title: "Attribute Deleted", description: `Attribute '${name}' deleted.`, type: "success" });
       refetch();
     } catch (err: unknown) {
       showErrorToast(err, "Failed to delete attribute.");
     }
   };
 
-  // Inline Add Value Handler (POST /attributes/:id/values)
-  const handleAddValue = async (attributeId: string) => {
-    const valText = (newValuesMap[attributeId] || "").trim();
-    if (!valText) return;
+  // Handle Add Value Inline
+  const handleAddInlineValue = async (attributeId: string) => {
+    const valStr = inlineValueInput[attributeId]?.trim();
+    if (!valStr) return;
 
-    setAddingValueAttrId(attributeId);
     try {
-      await createAttributeValue({
-        attributeId,
-        data: { value: valText },
-      }).unwrap();
-
-      toast({
-        title: "Value Added",
-        description: `Value '${valText}' added to attribute.`,
-        type: "success",
-      });
-
-      setNewValuesMap((prev) => ({ ...prev, [attributeId]: "" }));
+      await createAttributeValue({ attributeId, data: { value: valStr }, value: valStr }).unwrap();
+      toast({ title: "Value Added", description: `Option '${valStr}' added.`, type: "success" });
+      setInlineValueInput((prev) => ({ ...prev, [attributeId]: "" }));
       refetch();
     } catch (err: unknown) {
       showErrorToast(err, "Failed to add attribute value.");
-    } finally {
-      setAddingValueAttrId(null);
     }
   };
 
   // Open Edit Value Modal
-  const openEditValueModal = (attributeId: string, valueObj: IAttributeValue) => {
-    setEditingValueObj({ attributeId, value: valueObj });
-    setEditValueText(valueObj.value || "");
+  const openEditValueModal = (attrId: string, val: IAttributeValue) => {
+    setEditingValue({ attrId, val });
+    setValueText(val.value);
+    setIsValueModalOpen(true);
   };
 
-  // Save Edit Value Handler (PATCH /attributes/:id/values/:vid)
+  // Save Value Edit
   const handleSaveValueEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingValueObj || !editValueText.trim()) return;
+    if (!editingValue || !valueText.trim()) return;
 
-    const { attributeId, value } = editingValueObj;
-    const valueId = value.id || value._id || "";
+    const valId = editingValue.val.id || editingValue.val._id || "";
 
     try {
       await updateAttributeValue({
-        attributeId,
-        valueId,
-        data: { value: editValueText.trim() },
+        attributeId: editingValue.attrId,
+        valueId: valId,
+        data: { value: valueText.trim() },
+        value: valueText.trim(),
       }).unwrap();
 
-      toast({
-        title: "Value Updated",
-        description: `Attribute value updated to '${editValueText}'.`,
-        type: "success",
-      });
-
-      setEditingValueObj(null);
-      setEditValueText("");
+      toast({ title: "Option Updated", description: "Option value updated successfully.", type: "success" });
+      setIsValueModalOpen(false);
+      setEditingValue(null);
+      setValueText("");
       refetch();
     } catch (err: unknown) {
-      showErrorToast(err, "Failed to update attribute value.");
+      showErrorToast(err, "Failed to update option value.");
     }
   };
 
-  // Delete Attribute Value Handler (DELETE /attributes/:id/values/:vid)
-  const handleDeleteValue = async (attributeId: string, valueId: string, valName: string) => {
-    if (!window.confirm(`Remove value '${valName}'?`)) return;
+  // Delete Value
+  const handleDeleteValue = async (attrId: string, valId: string, valStr: string) => {
+    if (!window.confirm(`Delete option '${valStr}'?`)) return;
 
     try {
-      await deleteAttributeValue({ attributeId, valueId }).unwrap();
-      toast({
-        title: "Value Removed",
-        description: `Value '${valName}' deleted.`,
-        type: "info",
-      });
+      await deleteAttributeValue({ attributeId: attrId, valueId: valId }).unwrap();
+      toast({ title: "Option Deleted", description: `Option '${valStr}' deleted.`, type: "success" });
       refetch();
     } catch (err: unknown) {
-      showErrorToast(err, "Failed to delete attribute value.");
+      showErrorToast(err, "Failed to delete option value.");
     }
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Product Attributes & Options"
-        description="Manage product specification attributes (e.g. Size, Color, Capacity) and nested values."
+        title="Attribute & Variant Options"
+        description="Configure specifications like Size, Color, Storage, and RAM options."
       >
         {can("attribute:create") && (
           <Button onClick={openCreateAttrModal} size="sm" className="gap-2">
@@ -258,23 +219,20 @@ export default function AttributesPage() {
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search attributes..."
+            placeholder="Search attributes & options..."
             className="pl-9"
           />
         </div>
 
         <Badge variant="outline" className="gap-1.5 px-3 py-1 font-medium text-xs">
           <Sliders className="w-3.5 h-3.5 text-indigo-400" />
-          <span>{attributesList.length} Attributes</span>
+          <span>{filteredAttributes.length} Attributes</span>
         </Badge>
       </div>
 
-      {/* Attributes Content View */}
+      {/* Grid of Attribute Cards */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span>Loading product attributes from server...</span>
-        </div>
+        <GridSkeleton count={6} cols="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" />
       ) : error ? (
         <div className="text-center py-16 border border-border rounded-xl bg-card p-6">
           <p className="text-destructive font-medium text-sm">
@@ -284,122 +242,113 @@ export default function AttributesPage() {
             Retry Loading
           </Button>
         </div>
-      ) : attributesList.length === 0 ? (
+      ) : filteredAttributes.length === 0 ? (
         <div className="text-center py-20 border border-dashed border-border rounded-2xl bg-card/40 space-y-3">
           <Sliders className="w-10 h-10 mx-auto text-muted-foreground/50" />
           <p className="text-sm font-medium text-muted-foreground">No attributes found.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {attributesList.map((attr) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredAttributes.map((attr) => {
             const attrId = attr.id || attr._id || "";
             const values = attr.values || [];
-            const isAddingValue = addingValueAttrId === attrId;
 
             return (
               <div
                 key={attrId}
-                className="p-5 rounded-2xl border border-border bg-card/70 hover:bg-card hover:border-indigo-500/30 transition-all flex flex-col justify-between space-y-4 shadow-sm"
+                className="group relative p-5 rounded-2xl border border-border bg-card/60 hover:bg-card hover:border-indigo-500/30 transition-all space-y-4 shadow-sm flex flex-col justify-between"
               >
-                {/* Header: Attribute Title & Actions */}
-                <div className="flex items-center justify-between pb-3 border-b border-border">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
-                      <Sliders className="w-5 h-5" />
+                <div>
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-foreground text-sm">{attr.name}</h4>
+                        <p className="text-[11px] text-muted-foreground">
+                          {values.length} {values.length === 1 ? "option value" : "option values"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-foreground text-base capitalize">
-                        {attr.name}
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground">
-                        {values.length} {values.length === 1 ? "value option" : "value options"}
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-1">
-                    {can("attribute:update") && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-primary"
-                        onClick={() => openEditAttrModal(attr)}
-                        title="Edit Attribute Name"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </Button>
-                    )}
-                    {can("attribute:delete") && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteAttribute(attrId, attr.name)}
-                        title="Delete Attribute"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Values List Container */}
-                <div className="space-y-2 flex-1">
-                  <span className="text-xs font-semibold text-muted-foreground block">
-                    Option Values:
-                  </span>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {values.map((v) => {
-                      const vId = v.id || v._id || "";
-                      return (
-                        <div
-                          key={vId}
-                          className="group/val inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-medium transition-all"
+                    <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                      {can("attribute:update") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-primary"
+                          onClick={() => openEditAttrModal(attr)}
+                          title="Edit Attribute Name"
                         >
-                          <Tag className="w-3 h-3 text-indigo-400" />
-                          <span>{v.value}</span>
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      {can("attribute:delete") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteAttribute(attrId, attr.name)}
+                          title="Delete Attribute"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
 
-                          {can("attribute:update") && (
-                            <button
-                              type="button"
-                              onClick={() => openEditValueModal(attrId, v)}
-                              className="opacity-0 group-hover/val:opacity-100 hover:text-indigo-200 transition-opacity ml-1"
-                              title="Edit Value"
-                            >
-                              <Edit3 className="w-3 h-3" />
-                            </button>
-                          )}
-
-                          {can("attribute:update") && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteValue(attrId, vId, v.value)}
-                              className="opacity-0 group-hover/val:opacity-100 text-rose-400 hover:text-rose-300 transition-opacity"
-                              title="Delete Value"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    {values.length === 0 && (
+                  {/* Attribute Values Pill Badges */}
+                  <div className="py-3 flex flex-wrap gap-1.5 min-h-[50px] items-center">
+                    {values.length === 0 ? (
                       <span className="text-xs text-muted-foreground italic">
-                        No values added yet.
+                        No option values added yet.
                       </span>
+                    ) : (
+                      values.map((v) => {
+                        const valId = v.id || v._id || "";
+                        return (
+                          <div
+                            key={valId}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold group/pill"
+                          >
+                            <span>{v.value}</span>
+                            {can("attribute:update") && (
+                              <button
+                                type="button"
+                                onClick={() => openEditValueModal(attrId, v)}
+                                className="text-muted-foreground hover:text-primary transition-colors ml-0.5"
+                                title="Edit Value"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </button>
+                            )}
+                            {can("attribute:delete") && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteValue(attrId, valId, v.value)}
+                                className="text-muted-foreground hover:text-rose-400 transition-colors"
+                                title="Delete Value"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>
 
                 {/* Inline Add Value Input */}
-                {can("attribute:update") && (
-                  <div className="pt-3 border-t border-border flex items-center gap-2">
+                {can("attribute:create") && (
+                  <div className="pt-2 border-t border-border/50 flex items-center gap-2">
                     <Input
-                      value={newValuesMap[attrId] || ""}
+                      placeholder="Add option (e.g. 256GB)..."
+                      value={inlineValueInput[attrId] || ""}
                       onChange={(e) =>
-                        setNewValuesMap((prev) => ({
+                        setInlineValueInput((prev) => ({
                           ...prev,
                           [attrId]: e.target.value,
                         }))
@@ -407,25 +356,20 @@ export default function AttributesPage() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
-                          handleAddValue(attrId);
+                          handleAddInlineValue(attrId);
                         }
                       }}
-                      placeholder="Add value (e.g. 256GB)..."
-                      className="h-8 text-xs flex-1"
+                      className="h-8 text-xs bg-background/80"
                     />
                     <Button
-                      type="button"
                       size="sm"
-                      disabled={isAddingValue || !(newValuesMap[attrId] || "").trim()}
-                      onClick={() => handleAddValue(attrId)}
-                      className="h-8 px-3 text-xs gap-1"
+                      variant="secondary"
+                      onClick={() => handleAddInlineValue(attrId)}
+                      disabled={!inlineValueInput[attrId]?.trim() || isCreatingVal}
+                      className="h-8 px-2.5 text-xs gap-1 shrink-0"
                     >
-                      {isAddingValue ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Plus className="w-3.5 h-3.5" />
-                      )}
-                      <span>Add Option</span>
+                      {isCreatingVal ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                      Add
                     </Button>
                   </div>
                 )}
@@ -435,7 +379,7 @@ export default function AttributesPage() {
         </div>
       )}
 
-      {/* Main Attribute Create/Edit Modal Dialog */}
+      {/* Add / Edit Attribute Modal */}
       {isAttrModalOpen && (
         <Dialog open={isAttrModalOpen} onOpenChange={setIsAttrModalOpen}>
           <DialogContent className="sm:max-w-md">
@@ -453,7 +397,7 @@ export default function AttributesPage() {
                 </Label>
                 <Input
                   id="attrName"
-                  placeholder="e.g. Storage Capacity, Color, Size"
+                  placeholder="e.g. Mobile Storage Capacity, Color, Size"
                   value={attrName}
                   onChange={(e) => setAttrName(e.target.value)}
                   autoFocus
@@ -485,27 +429,27 @@ export default function AttributesPage() {
         </Dialog>
       )}
 
-      {/* Attribute Value Edit Modal Dialog */}
-      {editingValueObj && (
-        <Dialog open={Boolean(editingValueObj)} onOpenChange={() => setEditingValueObj(null)}>
+      {/* Edit Option Value Modal */}
+      {isValueModalOpen && editingValue && (
+        <Dialog open={isValueModalOpen} onOpenChange={setIsValueModalOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Tag className="w-5 h-5 text-indigo-500" />
+                <Sparkles className="w-5 h-5 text-indigo-500" />
                 <span>Edit Option Value</span>
               </DialogTitle>
             </DialogHeader>
 
             <form onSubmit={handleSaveValueEdit} className="space-y-4 py-3">
               <div className="space-y-2">
-                <Label htmlFor="editValText" className="font-semibold text-sm">
+                <Label htmlFor="valueText" className="font-semibold text-sm">
                   Option Value *
                 </Label>
                 <Input
-                  id="editValText"
-                  placeholder="e.g. 512GB, Red, XL"
-                  value={editValueText}
-                  onChange={(e) => setEditValueText(e.target.value)}
+                  id="valueText"
+                  placeholder="e.g. 256GB, Red, XL"
+                  value={valueText}
+                  onChange={(e) => setValueText(e.target.value)}
                   autoFocus
                   required
                 />
@@ -516,18 +460,18 @@ export default function AttributesPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setEditingValueObj(null)}
+                  onClick={() => setIsValueModalOpen(false)}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={isUpdatingValue}
+                  disabled={isUpdatingVal}
                   className="gap-1.5"
                 >
-                  {isUpdatingValue && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>Save Value</span>
+                  {isUpdatingVal && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>Save Option Value</span>
                 </Button>
               </DialogFooter>
             </form>

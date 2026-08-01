@@ -4,7 +4,7 @@ import { ILoginInput } from "@/types/common";
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    login: build.mutation<any, ILoginInput>({
+    login: build.mutation<{email:string, password: string}, ILoginInput>({
       query: (loginData) => ({
         url: "/auth/login",
         method: "POST",
@@ -12,14 +12,14 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: [tagTypes.users],
     }),
-    getSession: build.query<any, void>({
+    getSession: build.query<unknown, void>({
       query: () => ({
         url: "/auth/session",
         method: "GET",
       }),
       providesTags: [tagTypes.users],
     }),
-    logout: build.mutation<any, void>({
+    logout: build.mutation<unknown, void>({
       query: () => ({
         url: "/auth/logout",
         method: "POST",

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -72,8 +72,11 @@ export function ProductForm({ initialData, onSubmit, isLoading = false }: Produc
   // Total steps: 3 steps for Simple Product, 4 steps for Variable Product
   const totalSteps = hasVariants ? 4 : 3;
 
-  // Pre-fill initial product data for editing
-  useEffect(() => {
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
+
+  // Pre-fill initial product data for editing during render when initialData prop changes
+  if (prevInitialData !== initialData) {
+    setPrevInitialData(initialData);
     if (initialData) {
       setName(initialData.name || "");
       setDescription(initialData.description || "");
@@ -108,7 +111,7 @@ export function ProductForm({ initialData, onSubmit, isLoading = false }: Produc
         );
       }
     }
-  }, [initialData]);
+  }
 
   // Fetch Brands, Categories, Attributes
   const { data: brandsRes } = useGetAllBrandsQuery();

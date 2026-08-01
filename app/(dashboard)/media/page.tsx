@@ -6,6 +6,7 @@ import { MediaUploadBar } from "@/components/media/MediaUploadBar";
 import { MediaGrid } from "@/components/media/MediaGrid";
 import { MediaList } from "@/components/media/MediaList";
 import { MediaPreviewModal } from "@/components/media/MediaPreviewModal";
+import { GridSkeleton, TableSkeleton } from "@/components/shared/Skeletons";
 import {
   useGetAllMediaQuery,
   useUploadSingleMediaMutation,
@@ -160,10 +161,11 @@ export default function MediaPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span>Loading media assets library...</span>
-        </div>
+        viewMode === "grid" ? (
+          <GridSkeleton count={12} cols="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" />
+        ) : (
+          <TableSkeleton rows={6} />
+        )
       ) : error ? (
         <div className="text-center py-16 border border-border rounded-xl bg-card p-6">
           <p className="text-destructive font-medium text-sm">Failed to load media assets from server.</p>

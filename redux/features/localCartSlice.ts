@@ -71,10 +71,12 @@ const localCartSlice = createSlice({
             }>
         ) {
             const { product, variant, quantity } = action.payload;
+            const prodId = product.id || product._id || "";
+            const varId = variant.id || variant._id || "";
             const existing = state.items.find(
-                (i) => i.productId === product._id && i.variantId === variant._id
+                (i) => i.productId === prodId && i.variantId === varId
             );
-            const price = variant.discountPrice ?? variant.price;
+            const price = variant.discountPrice ?? variant.salePrice ?? variant.price;
 
             if (existing) {
                 existing.quantity = Math.min(
@@ -83,12 +85,12 @@ const localCartSlice = createSlice({
                 );
             } else {
                 state.items.push({
-                    productId: product._id,
-                    variantId: variant._id!,
+                    productId: prodId,
+                    variantId: varId,
                     quantity,
                     productName: product.name,
-                    productThumbnail: product.thumbnail,
-                    variantName: variant.name,
+                    productThumbnail: product.thumbnail || "",
+                    variantName: variant.name || variant.sku,
                     variantSku: variant.sku,
                     price,
                     originalPrice: variant.price,

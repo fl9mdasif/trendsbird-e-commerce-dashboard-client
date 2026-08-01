@@ -218,15 +218,19 @@ export interface IVariantAttributeInput {
 export interface IVariantInput {
   id?: string;
   _id?: string;
+  name?: string;
   productId?: string;
   price: number;
   salePrice?: number | null;
+  discountPrice?: number | null;
   stock: number;
   sku: string;
   attributes: IVariantAttributeInput[];
   createdAt?: string;
   updatedAt?: string;
 }
+
+export type TVariant = IVariantInput;
 
 export interface IProductCategoryLink {
   productId: string;
@@ -258,6 +262,7 @@ export interface IProduct {
   id: string;
   _id?: string;
   name: string;
+  thumbnail?: string;
   description?: string | null;
   hasVariants: boolean;
   price?: number | null;
@@ -274,3 +279,42 @@ export interface IProduct {
 }
 
 export type TProduct = IProduct;
+
+// ── Unified Module Entity & Response Types ────────────────────────────────────
+export type TModuleEntity =
+  | IProduct
+  | ICategory
+  | IBrand
+  | IAttribute
+  | IMedia
+  | IUser
+  | IRole
+  | IPermission;
+
+export type TModuleListResponse =
+  | IApiResponse<IProduct[]>
+  | IApiResponse<ICategory[]>
+  | IApiResponse<IBrand[]>
+  | IApiResponse<IAttribute[]>
+  | IApiResponse<IMedia[]>
+  | IApiResponse<IUser[]>
+  | IApiResponse<IRole[]>
+  | IApiResponse<IPermission[]>
+  | IProduct[]
+  | ICategory[]
+  | IBrand[]
+  | IAttribute[]
+  | IMedia[]
+  | IUser[]
+  | IRole[]
+  | IPermission[];
+
+export type TModuleSingleResponse =
+  | IApiResponse<IProduct>
+  | IApiResponse<ICategory>
+  | IApiResponse<IBrand>
+  | IApiResponse<IAttribute>
+  | IApiResponse<IMedia>
+  | IApiResponse<IUser>
+  | IApiResponse<IRole>
+  | IApiResponse<IPermission>;

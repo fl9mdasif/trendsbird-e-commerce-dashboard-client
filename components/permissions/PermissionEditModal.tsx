@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -27,13 +27,16 @@ export function PermissionEditModal({
   onSubmit,
   isLoading = false,
 }: PermissionEditModalProps) {
+  const [prevPermission, setPrevPermission] = useState(permission);
   const [name, setName] = useState(permission?.name || "");
   const [description, setDescription] = useState(permission?.description || "");
 
-  useEffect(() => {
+  // Sync state during render when permission prop changes (React recommended pattern)
+  if (prevPermission !== permission) {
+    setPrevPermission(permission);
     setName(permission?.name || "");
     setDescription(permission?.description || "");
-  }, [permission]);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

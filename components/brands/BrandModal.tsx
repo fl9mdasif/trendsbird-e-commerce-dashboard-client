@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,11 +29,14 @@ export function BrandModal({
   onSubmit,
   isLoading = false,
 }: BrandModalProps) {
+  const [prevBrand, setPrevBrand] = useState(initialBrand);
   const [brandName, setBrandName] = useState(initialBrand?.name || "");
 
-  useEffect(() => {
+  // Sync state during render when initialBrand prop changes (React recommended pattern)
+  if (prevBrand !== initialBrand) {
+    setPrevBrand(initialBrand);
     setBrandName(initialBrand?.name || "");
-  }, [initialBrand, open]);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

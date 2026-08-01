@@ -6,6 +6,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { ProductGrid } from "@/components/products/ProductGrid";
 import { ProductDetailsModal } from "@/components/products/ProductDetailsModal";
+import { GridSkeleton, TableSkeleton } from "@/components/shared/Skeletons";
 import {
   useGetAllProductsQuery,
   useDeleteProductMutation,
@@ -26,7 +27,6 @@ import {
   Search,
   Grid,
   List,
-  Loader2,
   Layers,
 } from "lucide-react";
 import { ColumnDef, CellContext } from "@tanstack/react-table";
@@ -206,7 +206,6 @@ export default function ProductsPage() {
 
         return (
           <div className="flex items-center gap-2">
-            {/* Inspect Action */}
             <Button
               variant="ghost"
               size="sm"
@@ -217,19 +216,6 @@ export default function ProductsPage() {
               <Eye className="w-4 h-4" />
             </Button>
 
-            {/* Edit Action Button (Hidden - Assignment requirement has no update option)
-            {can("product:update") && (
-              <Link
-                href={`/products/${pId}/edit`}
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 w-8 p-0 text-primary hover:bg-indigo-500/10")}
-                title="Edit Product"
-              >
-                <Edit3 className="w-4 h-4" />
-              </Link>
-            )}
-            */}
-
-            {/* Delete Action */}
             {can("product:delete") && (
               <Button
                 variant="ghost"
@@ -332,11 +318,13 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      {/* Grid or Table Content View */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span>Loading products catalog from server...</span>
-        </div>
+        viewMode === "grid" ? (
+          <GridSkeleton count={8} cols="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5" />
+        ) : (
+          <TableSkeleton rows={6} />
+        )
       ) : error ? (
         <div className="text-center py-16 border border-border rounded-xl bg-card p-6">
           <p className="text-destructive font-medium text-sm">

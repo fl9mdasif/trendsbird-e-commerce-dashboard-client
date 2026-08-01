@@ -9,6 +9,7 @@ import { useAppDispatch } from "@/redux/hooks";
 import { setSession } from "@/redux/features/authSlice";
 import { storeUserInfo } from "@/services/auth.services";
 import { api } from "@/lib/axios";
+import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,9 +83,8 @@ export default function LoginPage() {
       } else {
         setErrorMsg("Invalid response from server. Missing access token.");
       }
-    } catch (err: any) {
-      const message =
-        err?.message || err?.errorMessages || "Invalid credentials. Please check email and password.";
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, "Invalid credentials. Please check email and password.");
       setErrorMsg(message);
     } finally {
       setIsLoading(false);

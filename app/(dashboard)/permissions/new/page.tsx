@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
+import {  showErrorToast } from "@/lib/utils";
 import { ArrowLeft, Loader2, Save, Shield } from "lucide-react";
 
 const ACTIONS = [
@@ -88,11 +89,7 @@ export default function NewPermissionGroupPage() {
 
       router.push("/permissions");
     } catch (err: unknown) {
-      toast({
-        title: "Error Creating Permissions",
-        description: err?.message || err?.data?.message || "Failed to create permission group.",
-        type: "error",
-      });
+      showErrorToast(err, "Failed to create permission group.");
     }
   };
 

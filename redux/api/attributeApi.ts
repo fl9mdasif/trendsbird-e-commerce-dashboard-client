@@ -60,26 +60,34 @@ const attributeApi = baseApi.injectEndpoints({
     // POST /attributes/:id/values (createAttributeValue)
     createAttributeValue: build.mutation<
       IApiResponse<IAttributeValue>,
-      { attributeId: string; data: { value: string } }
+      { attributeId: string; value: string; data?: { value: string } }
     >({
-      query: ({ attributeId, data }) => ({
-        url: `/attributes/${attributeId}/values`,
-        method: "POST",
-        data,
-      }),
+      query: (arg) => {
+        const attributeId = arg.attributeId;
+        const bodyData = arg.data ? arg.data : { value: arg.value };
+        return {
+          url: `/attributes/${attributeId}/values`,
+          method: "POST",
+          data: bodyData,
+        };
+      },
       invalidatesTags: [tagTypes.attributes],
     }),
 
     // PATCH /attributes/:id/values/:vid (updateAttributeValue)
     updateAttributeValue: build.mutation<
       IApiResponse<IAttributeValue>,
-      { attributeId: string; valueId: string; data: { value: string } }
+      { attributeId: string; valueId: string; value?: string; data?: { value: string } }
     >({
-      query: ({ attributeId, valueId, data }) => ({
-        url: `/attributes/${attributeId}/values/${valueId}`,
-        method: "PATCH",
-        data,
-      }),
+      query: (arg) => {
+        const { attributeId, valueId } = arg;
+        const bodyData = arg.data ? arg.data : { value: arg.value };
+        return {
+          url: `/attributes/${attributeId}/values/${valueId}`,
+          method: "PATCH",
+          data: bodyData,
+        };
+      },
       invalidatesTags: [tagTypes.attributes],
     }),
 

@@ -8,10 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useGetAllProductsQuery } from "@/redux/api/productApi";
+import { useGetAllCategoriesQuery } from "@/redux/api/categoryApi";
+import { useGetAllBrandsQuery } from "@/redux/api/brandApi";
+import { useGetAllAttributesQuery } from "@/redux/api/attributeApi";
+import { useGetAllMediaQuery } from "@/redux/api/mediaApi";
+import { TModuleListResponse } from "@/types/common";
 import {
   Package,
-  Users,
-  Shield,
   Tag,
   Briefcase,
   Image as ImageIcon,
@@ -20,66 +24,26 @@ import {
   Sparkles,
   Zap,
   CheckCircle2,
+  Loader2,
+  TrendingUp,
 } from "lucide-react";
 
-const STATS_CARDS = [
-  {
-    title: "Products Catalog",
-    description: "Manage simple & multi-variant items",
-    href: "/products",
-    icon: Package,
-    badge: "Core",
-    gradient: "from-blue-500/20 to-indigo-500/20 text-blue-500 border-blue-500/30",
-  },
-  {
-    title: "Categories Tree",
-    description: "Nested category hierarchy & parent selection",
-    href: "/categories",
-    icon: Tag,
-    badge: "Catalog",
-    gradient: "from-emerald-500/20 to-teal-500/20 text-emerald-500 border-emerald-500/30",
-  },
-  {
-    title: "Brand Library",
-    description: "Brands & logo media attacher",
-    href: "/brands",
-    icon: Briefcase,
-    badge: "Catalog",
-    gradient: "from-purple-500/20 to-pink-500/20 text-purple-500 border-purple-500/30",
-  },
-  {
-    title: "Attributes & Hex Colors",
-    description: "Attribute types, color pickers & inline values",
-    href: "/attributes",
-    icon: Sliders,
-    badge: "Variants",
-    gradient: "from-amber-500/20 to-orange-500/20 text-amber-500 border-amber-500/30",
-  },
-  {
-    title: "Roles & Permission Matrix",
-    description: "RBAC module-by-action grid & shortcuts",
-    href: "/roles",
-    icon: Shield,
-    badge: "Security",
-    gradient: "from-rose-500/20 to-red-500/20 text-rose-500 border-rose-500/30",
-  },
-  {
-    title: "User Management",
-    description: "Accounts, status toggle & self-role guard",
-    href: "/users",
-    icon: Users,
-    badge: "Security",
-    gradient: "from-indigo-500/20 to-violet-500/20 text-indigo-500 border-indigo-500/30",
-  },
-  {
-    title: "Media Assets",
-    description: "Single/multi uploader & gallery picker",
-    href: "/media",
-    icon: ImageIcon,
-    badge: "Storage",
-    gradient: "from-cyan-500/20 to-sky-500/20 text-cyan-500 border-cyan-500/30",
-  },
-];
+/**
+ * Clean helper function typed with TModuleListResponse to extract count safely
+ */
+function getCount(res: TModuleListResponse | undefined | null): number {
+  if (!res) return 0;
+  if ("meta" in res && typeof res.meta?.total === "number") {
+    return res.meta.total;
+  }
+  if ("data" in res && Array.isArray(res.data)) {
+    return res.data.length;
+  }
+  if (Array.isArray(res)) {
+    return res.length;
+  }
+  return 0;
+}
 
 export default function DashboardHomePage() {
   const user = useAppSelector((state) => state.auth.user);
@@ -92,34 +56,106 @@ export default function DashboardHomePage() {
       ? user.email
       : "Admin";
 
+  // Fetch full lists for the 5 specified modules without pagination restriction
+  const { data: productsRes, isLoading: pLoading } = useGetAllProductsQuery({ limit: 100 });
+  const { data: categoriesRes, isLoading: cLoading } = useGetAllCategoriesQuery();
+  const { data: brandsRes, isLoading: bLoading } = useGetAllBrandsQuery();
+  const { data: attributesRes, isLoading: aLoading } = useGetAllAttributesQuery();
+  const { data: mediaRes, isLoading: mLoading } = useGetAllMediaQuery({ limit: 100 });
+
+  // Clean count extraction using TModuleListResponse
+  const productCount = getCount(productsRes as TModuleListResponse);
+  const categoryCount = getCount(categoriesRes as TModuleListResponse);
+  const brandCount = getCount(brandsRes as TModuleListResponse);
+  const attributeCount = getCount(attributesRes as TModuleListResponse);
+  const mediaCount = getCount(mediaRes as TModuleListResponse);
+
+  const STATS_CARDS = [
+    {
+      title: "Products",
+      count: productCount,
+      isLoading: pLoading,
+      unit: "Items",
+      href: "/products",
+      icon: Package,
+      badge: "Catalog",
+      gradient: "from-indigo-500/20 via-indigo-500/10 to-transparent text-indigo-400 border-indigo-500/30",
+      accent: "bg-indigo-500",
+    },
+    {
+      title: "Categories",
+      count: categoryCount,
+      isLoading: cLoading,
+      unit: "Categories",
+      href: "/categories",
+      icon: Tag,
+      badge: "Catalog",
+      gradient: "from-emerald-500/20 via-emerald-500/10 to-transparent text-emerald-400 border-emerald-500/30",
+      accent: "bg-emerald-500",
+    },
+    {
+      title: "Brands",
+      count: brandCount,
+      isLoading: bLoading,
+      unit: "Brands",
+      href: "/brands",
+      icon: Briefcase,
+      badge: "Catalog",
+      gradient: "from-purple-500/20 via-purple-500/10 to-transparent text-purple-400 border-purple-500/30",
+      accent: "bg-purple-500",
+    },
+    {
+      title: "Attributes",
+      count: attributeCount,
+      isLoading: aLoading,
+      unit: "Specifications",
+      href: "/attributes",
+      icon: Sliders,
+      badge: "Variants",
+      gradient: "from-amber-500/20 via-amber-500/10 to-transparent text-amber-400 border-amber-500/30",
+      accent: "bg-amber-500",
+    },
+    {
+      title: "Media",
+      count: mediaCount,
+      isLoading: mLoading,
+      unit: "Files",
+      href: "/media",
+      icon: ImageIcon,
+      badge: "Storage",
+      gradient: "from-cyan-500/20 via-cyan-500/10 to-transparent text-cyan-400 border-cyan-500/30",
+      accent: "bg-cyan-500",
+    },
+  ];
+
   return (
     <div className="space-y-8">
-      {/* Modern Welcome Hero Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-950 p-6 md:p-8 border border-indigo-900/40 text-white shadow-xl">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Welcome Hero Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-6 md:p-8 border border-slate-800/80 text-white shadow-2xl">
+        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold backdrop-blur-md">
               <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Trends Bird Limited Assessment</span>
+              <span>Trends Bird Limited Admin Panel</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
               Welcome back, <span className="text-indigo-400">{displayName}</span> 👋
             </h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Your admin portal is fully initialized. Access permission-filtered modules below to manage users, catalog items, attributes, and role permissions.
+            <p className="text-sm text-slate-300/90 leading-relaxed font-normal">
+              Overview of catalog items, categories, brands, attributes, and media storage assets.
             </p>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-medium text-slate-300">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-semibold text-slate-300">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>API Active</span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-900/40 border border-indigo-700/50 text-xs font-medium text-indigo-200">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-950/60 border border-indigo-800/40 text-xs font-semibold text-indigo-200">
               <Zap className="w-4 h-4 text-indigo-400" />
-              <span>RBAC Engine</span>
+              <span>Live System</span>
             </div>
           </div>
         </div>
@@ -127,46 +163,65 @@ export default function DashboardHomePage() {
 
       {/* Page Section Title */}
       <PageHeader
-        title="Admin Modules Overview"
-        description="Select a module to view, create, or update platform resources."
+        title="Catalog & Storage Overview"
+        description="Real-time counts for Products, Categories, Brands, Attributes, and Media assets."
       />
 
-      {/* Modern Module Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {/* 5 Clean Dashboard Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
         {STATS_CARDS.map((card) => {
           const Icon = card.icon;
           return (
             <Card
               key={card.href}
-              className="group hover:border-indigo-500/40 hover:shadow-lg transition-all duration-200 bg-card/60 backdrop-blur-sm flex flex-col justify-between"
+              className="group relative overflow-hidden rounded-2xl border border-border/80 bg-card/70 backdrop-blur-md hover:bg-card hover:border-indigo-500/40 transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-md flex flex-col justify-between"
             >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <div className={cn("p-2.5 rounded-xl border", card.gradient)}>
+              <div className={cn("absolute top-0 inset-x-0 h-1 transition-all duration-300 opacity-80 group-hover:opacity-100", card.accent)} />
+
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
+                <div className={cn("p-2.5 rounded-xl border transition-transform duration-300 group-hover:scale-105", card.gradient)}>
                   <Icon className="w-5 h-5" />
                 </div>
-                <Badge variant="outline" className="text-[10px] font-medium tracking-wide">
+
+                <Badge
+                  variant="outline"
+                  className="text-[10px] font-semibold uppercase bg-muted/30 border-border/60 text-muted-foreground px-2 py-0.5"
+                >
                   {card.badge}
                 </Badge>
               </CardHeader>
-              <CardContent className="space-y-4 pt-2">
+
+              <CardContent className="p-4 pt-2 space-y-4">
                 <div>
-                  <CardTitle className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="text-3xl font-black text-foreground tracking-tight flex items-center gap-2 font-mono">
+                      {card.isLoading ? (
+                        <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+                      ) : (
+                        <span>{card.count.toLocaleString()}</span>
+                      )}
+                    </h3>
+
+                    <div className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full border border-emerald-500/20">
+                      <TrendingUp className="w-3 h-3" />
+                      <span>Live</span>
+                    </div>
+                  </div>
+
+                  <CardTitle className="text-sm font-extrabold text-foreground group-hover:text-indigo-400 transition-colors mt-1">
                     {card.title}
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                    {card.description}
-                  </p>
                 </div>
 
                 <Link
                   href={card.href}
                   className={cn(
-                    buttonVariants({ variant: "outline", size: "sm" }),
-                    "w-full justify-between font-medium group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200"
+                    buttonVariants({ variant: "ghost", size: "sm" }),
+                    "w-full justify-between font-semibold text-xs rounded-xl bg-muted/40 hover:bg-indigo-600 hover:text-white transition-all duration-300 h-8 px-3 group/btn"
                   )}
                 >
-                  <span>Open Module</span>
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  <span>View {card.title}</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5" />
                 </Link>
               </CardContent>
             </Card>

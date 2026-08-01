@@ -51,6 +51,9 @@ instance.interceptors.response.use(
   // @ts-ignore
   function (response) {
     const responseObject: ResponseSuccessType = {
+      statusCode: response?.data?.statusCode || response?.status || 200,
+      success: response?.data?.success !== undefined ? response.data.success : true,
+      message: response?.data?.message || "Success",
       data: response?.data?.data !== undefined ? response.data.data : response.data,
       meta: response?.data?.meta,
     };
@@ -59,8 +62,18 @@ instance.interceptors.response.use(
   async function (error) {
     const originalRequest = error?.config;
 
-    // Handle 401 Unauthorized & Refresh Token Flow
-    if (error?.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    const isAuthRoute =
+      originalRequest?.url?.includes("/auth/login") ||
+      originalRequest?.url?.includes("/auth/register") ||
+      originalRequest?.url?.includes("/auth/refresh");
+
+    // Handle 401 Unauthorized & Refresh Token Flow (ONLY for non-auth protected endpoints)
+    if (
+      error?.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isAuthRoute
+    ) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -78,7 +91,10 @@ instance.interceptors.response.use(
       isRefreshing = true;
 
       const refreshToken = getFromLocalStorage("refreshToken");
-      const baseURL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:5000/api";
+      const baseURL =
+        process.env.NEXT_PUBLIC_API_URL ||
+        process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+        "http://localhost:5000/api";
 
       if (refreshToken) {
         try {
@@ -119,6 +135,7 @@ instance.interceptors.response.use(
           isRefreshing = false;
         }
       } else {
+        isRefreshing = false;
         removeFromLocalStorage(authKey);
         if (typeof document !== "undefined" && window.location.pathname !== "/login") {
           window.location.href = "/login";
@@ -128,8 +145,8 @@ instance.interceptors.response.use(
 
     const responseObject: IGenericErrorResponse = {
       statusCode: error?.response?.status || error?.response?.data?.statusCode || 500,
+      success: false,
       message: error?.response?.data?.message || error?.message || "Something went wrong!",
-      errorMessages: error?.response?.data?.message,
     };
     return Promise.reject(responseObject);
   }

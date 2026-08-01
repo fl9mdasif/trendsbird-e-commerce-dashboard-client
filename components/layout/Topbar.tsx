@@ -7,14 +7,7 @@ import { removeUser, getRoleString } from "@/services/auth.services";
 import { useRouter, usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+ 
 import { LogOut, Shield, ChevronRight } from "lucide-react";
 
 export const Topbar: React.FC = () => {
@@ -28,15 +21,6 @@ export const Topbar: React.FC = () => {
     dispatch(clearSession());
     router.push("/login");
   };
-
-  const displayName =
-    typeof user?.fullName === "string"
-      ? user.fullName
-      : typeof user?.name === "string"
-      ? user.name
-      : typeof user?.email === "string"
-      ? user.email
-      : "Admin User";
 
   const userRole = getRoleString(user?.role);
 
@@ -80,29 +64,7 @@ export const Topbar: React.FC = () => {
           <span className="hidden sm:inline">Log out</span>
         </Button>
 
-        {/* Profile Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger className="relative h-9 w-9 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 p-[2px] cursor-pointer outline-none shadow-md hover:scale-105 transition-transform">
-            <div className="flex h-full w-full items-center justify-center rounded-full bg-card text-foreground font-bold text-sm">
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 mt-1">
-            <DropdownMenuLabel className="font-normal p-3">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-bold leading-none text-foreground">{displayName}</p>
-                {user?.email && (
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                )}
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer font-medium p-2.5">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        
       </div>
     </header>
   );
